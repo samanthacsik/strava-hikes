@@ -1,0 +1,74 @@
+---
+title: "Strava Hikes (new)"
+output: html_document
+date: '2022-05-25'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages
+```{r}
+library(rStrava) # devtools::install_github('fawda123/rStrava')
+library(gganimate) # devtools::install_github('dgrtwo/gganimate')
+library(tidyverse)
+library(sp)
+library(ggmap)
+library(raster)
+```
+
+## Setup (also see [this issue](https://github.com/GoldenCheetah/GoldenCheetah/issues/3199) regarding `app_scope`)
+```{r}
+# load Strava app name, client ID, secret, and athlete id, along with Google Elveation API key
+source("keys.R")
+register_google(GoogleAPI) # need todo before using `rStrava::get_heat_map()`
+
+# create strava token
+my_token <- httr::config(token = strava_oauth(app_name, app_client_id, app_secret,
+                                              app_scope = "activity:read_all"))
+```
+
+## Get data
+```{r}
+# get all activity data from Strava
+my_actvities <- rStrava::get_activity_list(stoken = my_token)
+
+# number of activities
+length(my_acts) # 194 activites as of 6/2/2022
+
+# columns to remove (can remove these below if you want)
+# cols_to_remove <- c("athlete.resource_state", "comment_count", "commute",
+#                     "display_hide_heartrate_option",
+#                     "flagged", "from_accepted_tag", "has_heartrate",
+#                     "has_kudoed", "heartrate_opt_out",
+#                     "manual", "photo_count", "private",
+#                     "total_photo_count", "trainer",
+#                     "upload_id_str", "visibility", "device_watts",
+#                     "gear_id", "average_watts", "kilojoules",
+#                     "workout_type")
+
+# compile activities into tidy df and filter for just hikes
+my_hikes <- rStrava::compile_activities(my_actvities) %>% 
+  # dplyr::select(-cols_to_remove) %>% 
+  filter(type == "Hike")
+```
+
+## Get lat lon data
+```{r}
+
+# get lat lon data
+lat_lon <- my_hikes %>%
+  filter(!is.na(map.summary_polyline)) %>%
+  nest(., -activity_no) %>%
+  mutate(coords = map(data, get_latlon),
+         distance = map(coords, ~get_dists(.x$lon, .x$lat))) %>%
+  unnest(., data) %>%
+  unnest(., coords, distance)
+  
+
+get_heat_map(my_hikes, key = GoogleAPI, col = 'darkgreen', size = 2, distlab = F, f = 0.4)
+```
+

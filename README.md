@@ -7,3 +7,4 @@ Additional Resources:
 * [Getting Started with the Strava API](https://developers.strava.com/docs/getting-started/)  
 * [{rStrava}](https://github.com/fawda123/rStrava) 
 * [Animate your Strava activities in R using rStrava and gganimate](https://padpadpadpad.github.io/post/animate-your-strava-activities-using-rstrava-and-gganimate/) by Daniel Padfield
+* I also followed [these instructions](https://developers.google.com/maps/documentation/elevation/get-api-key) for creating a Google API key
