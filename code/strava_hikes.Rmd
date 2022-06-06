@@ -1,7 +1,7 @@
 ---
-title: "Strava Hikes (new)"
+title: "Strava Hikes"
 output: html_document
-date: '2022-05-25'
+date: '2022-06-05'
 editor_options: 
   chunk_output_type: console
 ---
