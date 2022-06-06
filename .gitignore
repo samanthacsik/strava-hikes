@@ -40,3 +40,4 @@ vignettes/*.pdf
 
 # files hidden for privacy
 keys.R
+maps/*
