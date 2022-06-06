@@ -10,65 +10,117 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+**LAST UPDATED: 4 June 2022**
+
 ## Load packages
 ```{r}
+#..........................load packages.........................
 library(rStrava) # devtools::install_github('fawda123/rStrava')
-library(gganimate) # devtools::install_github('dgrtwo/gganimate')
 library(tidyverse)
-library(sp)
-library(ggmap)
-library(raster)
+library(leaflet)
+library(googleway)
+library(htmlwidgets)
+library(htmltools)
 ```
 
-## Setup (also see [this issue](https://github.com/GoldenCheetah/GoldenCheetah/issues/3199) regarding `app_scope`)
+## Setup
 ```{r}
-# load Strava app name, client ID, secret, and athlete id, along with Google Elveation API key
+#.......Strava app name, client ID, secret, and athlete id.......
 source("keys.R")
-register_google(GoogleAPI) # need todo before using `rStrava::get_heat_map()`
 
-# create strava token
+#......................create strava token.......................
 my_token <- httr::config(token = strava_oauth(app_name, app_client_id, app_secret,
                                               app_scope = "activity:read_all"))
 ```
 
-## Get data
+## Get data & prep
 ```{r}
-# get all activity data from Strava
+#....................scrape strava activities....................
 my_actvities <- rStrava::get_activity_list(stoken = my_token)
 
-# number of activities
-length(my_acts) # 194 activites as of 6/2/2022
+#......................number of activities......................
+length(my_actvities) # 196 activites as of 6/4/2022
 
-# columns to remove (can remove these below if you want)
-# cols_to_remove <- c("athlete.resource_state", "comment_count", "commute",
-#                     "display_hide_heartrate_option",
-#                     "flagged", "from_accepted_tag", "has_heartrate",
-#                     "has_kudoed", "heartrate_opt_out",
-#                     "manual", "photo_count", "private",
-#                     "total_photo_count", "trainer",
-#                     "upload_id_str", "visibility", "device_watts",
-#                     "gear_id", "average_watts", "kilojoules",
-#                     "workout_type")
+#........................save as csv file........................
+# my_activities <- rStrava::compile_activities(my_actvities)
+# write_csv(my_activities, "data/strava_acts_2022-06-04.csv")
 
-# compile activities into tidy df and filter for just hikes
+#..............compile activities & clean up hikes...............
 my_hikes <- rStrava::compile_activities(my_actvities) %>% 
-  # dplyr::select(-cols_to_remove) %>% 
-  filter(type == "Hike")
+  filter(type == "Hike") %>% 
+  mutate(total_miles = round(distance * 0.62137, digits = 2),
+         elevation_gain_ft = round(total_elevation_gain * 3.28084, digits = 2)) %>% 
+  dplyr::select(id, name, total_miles, elevation_gain_ft, lat = start_latlng1, lng = start_latlng2, map.summary_polyline) %>%
+  filter(id != "5502812467") # remove hike that didn't recorded correctly
 ```
 
-## Get lat lon data
+## Create base map
 ```{r}
+#..........make hiker icon with fa (can't adjust size)...........
+# hiker_icon_fa <- makeAwesomeIcon(
+#   icon = "hiking",
+#   text = fontawesome::fa("hiking"),
+#   iconColor = "black",
+#   markerColor = "lightgray",
+#   library = "fa"
+# )
 
-# get lat lon data
-lat_lon <- my_hikes %>%
-  filter(!is.na(map.summary_polyline)) %>%
-  nest(., -activity_no) %>%
-  mutate(coords = map(data, get_latlon),
-         distance = map(coords, ~get_dists(.x$lon, .x$lat))) %>%
-  unnest(., data) %>%
-  unnest(., coords, distance)
+#............make custom hiker icon (can adjust size)............
+hiker_icon_custom <- makeIcon(
+  iconUrl = "media/hiker.png",
+  iconWidth = 15, iconHeight = 15
+)
+
+#........................create base map.........................
+map <- leaflet(my_hikes) %>% 
   
+  # add tiles
+  addProviderTiles("Esri.WorldTerrain", 
+                   options = providerTileOptions(maxNativeZoom = 19,maxZoom = 100)) %>%
+  
+  # set view over Santa Barbara 
+  setView(lng = -119.753042, lat = 34.484782, zoom = 10) %>% 
+  
+  # add clickable hiker markers with info about each hike
+  addMarkers(icon = hiker_icon_custom, group = "Hide Icons",
+             lng = ~jitter(lng, factor = 6), lat = ~jitter(lat, factor = 6),
+             popup = paste("Hike Title:", my_hikes$name, "<br>",
+                           "Distance (miles):", my_hikes$total_miles, "<br>",
+                           "Elevation gain (ft):", my_hikes$elevation_gain_ft)) %>% 
+  
+  # allow for toggling makers on/off
+  addLayersControl(
+    overlayGroups = c("Hide Icons"),
+    options = layersControlOptions(collapsed = TRUE)
+  )
+```
 
-get_heat_map(my_hikes, key = GoogleAPI, col = 'darkgreen', size = 2, distlab = F, f = 0.4)
+# loop through `my_hikes` and convert Google Polylines to dataframe of lat/lon and add activities to map
+```{r}
+#......................get unique hike ids.......................
+unique_hike_ids <- unique(my_hikes$id)
+
+#.............iterate over activities and add to map.............
+for (i in unique_hike_ids) {
+  
+  #........................1) get activity.........................
+  activity <- filter(my_hikes, id == i)
+  
+  #..............decode polyline to create map outline.............
+  coords <- googleway::decode_pl(activity$map.summary_polyline)
+  
+  #..................plot hike outline on basemap..................
+  map <- addPolylines(map, lng = coords$lon, lat = coords$lat,
+                      color = "#DF0101", opacity = 1/4, weight = 2)
+
+}
+
+#............................print map...........................
+map
+
+#............................save map............................
+saveWidget(map, 
+           file = "maps/sams_hiking_map_ESRITerrain.html",
+           selfcontained = TRUE)
 ```
 
