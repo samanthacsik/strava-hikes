@@ -26,7 +26,7 @@ library(htmltools)
 ## Setup
 ```{r}
 #.......Strava app name, client ID, secret, and athlete id.......
-source("keys.R")
+source("code/keys.R")
 
 #......................create strava token.......................
 my_token <- httr::config(token = strava_oauth(app_name, app_client_id, app_secret,
@@ -68,7 +68,7 @@ my_hikes <- rStrava::compile_activities(my_actvities) %>%
 #............make custom hiker icon (can adjust size)............
 hiker_icon_custom <- makeIcon(
   iconUrl = "media/hiker.png",
-  iconWidth = 15, iconHeight = 15
+  iconWidth = 20, iconHeight = 20
 )
 
 #........................create base map.........................
@@ -82,7 +82,7 @@ map <- leaflet(my_hikes) %>%
   setView(lng = -119.753042, lat = 34.484782, zoom = 10) %>% 
   
   # add clickable hiker markers with info about each hike
-  addMarkers(icon = hiker_icon_custom, group = "Hide Icons",
+  addMarkers(icon = hiker_icon_custom, group = "Display Icons",
              lng = ~jitter(lng, factor = 6), lat = ~jitter(lat, factor = 6),
              popup = paste("Hike Title:", my_hikes$name, "<br>",
                            "Distance (miles):", my_hikes$total_miles, "<br>",
@@ -90,7 +90,7 @@ map <- leaflet(my_hikes) %>%
   
   # allow for toggling makers on/off
   addLayersControl(
-    overlayGroups = c("Hide Icons"),
+    overlayGroups = c("Display Icons"),
     options = layersControlOptions(collapsed = TRUE)
   )
 ```
@@ -120,7 +120,7 @@ map
 
 #............................save map............................
 saveWidget(map, 
-           file = "maps/sams_hiking_map_ESRITerrain.html",
+           file = "maps/sams_hiking_map_ESRITerrain_LARGEICON.html",
            selfcontained = TRUE)
 ```
 
