@@ -41,86 +41,124 @@ my_actvities <- rStrava::get_activity_list(stoken = my_token)
 #......................number of activities......................
 length(my_actvities) # 196 activites as of 6/4/2022
 
-#........................save as csv file........................
-# my_activities <- rStrava::compile_activities(my_actvities)
-# write_csv(my_activities, "data/strava_acts_2022-06-04.csv")
-
-#..............compile activities & clean up hikes...............
-my_hikes <- rStrava::compile_activities(my_actvities) %>% 
-  filter(type == "Hike") %>% 
+#...............compile and clean up activity data...............
+my_acts <- rStrava::compile_activities(my_actvities) %>%
   mutate(total_miles = round(distance * 0.62137, digits = 2),
-         elevation_gain_ft = round(total_elevation_gain * 3.28084, digits = 2)) %>% 
-  dplyr::select(id, name, total_miles, elevation_gain_ft, lat = start_latlng1, lng = start_latlng2, map.summary_polyline) %>%
-  filter(id != "5502812467") # remove hike that didn't recorded correctly
+         elevation_gain_ft = round(total_elevation_gain * 3.28084, digits = 2)) %>%
+  dplyr::select(id, type, name, total_miles, elevation_gain_ft, lat = start_latlng1, lng = start_latlng2, map.summary_polyline) %>%
+  filter(id != "5502812467", # remove hike that didn't recorded correctly
+         !type %in% c("Workout")) # remove recorded workouts (don't have location data associated with them)
+
+#...................create subsets by activity...................
+hike_data <- my_acts %>% filter(type == "Hike")
+ride_data <- my_acts %>% filter(type == "Ride")
+walk_data <- my_acts %>% filter(type == "Walk")
 ```
 
-## Create base map
+
+## Create base map & add icons and heatmap legend
 ```{r}
-#..........make hiker icon with fa (can't adjust size)...........
-# hiker_icon_fa <- makeAwesomeIcon(
-#   icon = "hiking",
-#   text = fontawesome::fa("hiking"),
-#   iconColor = "black",
-#   markerColor = "lightgray",
-#   library = "fa"
+#........................make custom icons.......................
+# activity_icons <- iconList(
+#   "Hike" = makeIcon(iconUrl = "media/hiker.png", iconWidth = 20, iconHeight = 20),
+#   "Ride" = makeIcon(iconUrl = "media/bike.png", iconWidth = 20, iconHeight = 20),
+#   "Walk" = makeIcon(iconUrl = "media/walk.png", iconWidth = 20, iconHeight = 20)
 # )
 
-#............make custom hiker icon (can adjust size)............
 hiker_icon_custom <- makeIcon(
   iconUrl = "media/hiker.png",
   iconWidth = 20, iconHeight = 20
 )
 
+bike_icon_custom <- makeIcon(
+  iconUrl = "media/bike.png",
+  iconWidth = 22, iconHeight = 25
+)
+
+walk_icon_custom <- makeIcon(
+  iconUrl = "media/walker.png",
+  iconWidth = 13, iconHeight = 18
+)
+
 #........................create base map.........................
-map <- leaflet(my_hikes) %>% 
+map <- leaflet() %>% 
   
   # add tiles
   addProviderTiles("Esri.WorldTerrain", 
-                   options = providerTileOptions(maxNativeZoom = 19,maxZoom = 100)) %>%
+                   options = providerTileOptions(maxNativeZoom = 19, maxZoom = 100)) %>%
   
   # set view over Santa Barbara 
   setView(lng = -119.753042, lat = 34.484782, zoom = 10) %>% 
   
   # add clickable hiker markers with info about each hike
-  addMarkers(icon = hiker_icon_custom, group = "Display Icons",
+  addMarkers(data = hike_data, icon = hiker_icon_custom, group = "Display Hike Icons",
              lng = ~jitter(lng, factor = 6), lat = ~jitter(lat, factor = 6),
-             popup = paste("Hike Title:", my_hikes$name, "<br>",
-                           "Distance (miles):", my_hikes$total_miles, "<br>",
-                           "Elevation gain (ft):", my_hikes$elevation_gain_ft)) %>% 
-  
+             popup = paste("Hike Title:", hike_data$name, "<br>",
+                           "Distance (miles):", hike_data$total_miles, "<br>",
+                           "Elevation gain (ft):", hike_data$elevation_gain_ft)) %>%
+
+  # add clickable bike markers with info about each ride 
+  addMarkers(data = ride_data, icon = bike_icon_custom, group = "Display Bike Ride Icons",
+             lng = ~jitter(lng, factor = 6), lat = ~jitter(lat, factor = 6),
+             popup = paste("Ride Title:", ride_data$name, "<br>",
+                           "Distance (miles):", ride_data$total_miles, "<br>",
+                           "Elevation gain (ft):", ride_data$elevation_gain_ft)) %>%
+
+  # add clickable walker markers with info about each  walk
+  addMarkers(data = walk_data, icon = walk_icon_custom, group = "Display Walk Icons",
+             lng = ~jitter(lng, factor = 6), lat = ~jitter(lat, factor = 6),
+             popup = paste("Walk Title:", walk_data$name, "<br>",
+                           "Distance (miles):", walk_data$total_miles, "<br>",
+                           "Elevation gain (ft):", walk_data$elevation_gain_ft)) %>%
+
   # allow for toggling makers on/off
   addLayersControl(
-    overlayGroups = c("Display Icons"),
+    overlayGroups = c("Display Hike Icons", "Display Bike Ride Icons", "Display Walk Icons"),
     options = layersControlOptions(collapsed = TRUE)
-  )
+  ) %>%
+  
+  # add heatmap legend
+  addLegend(colors = c("#DF0101", "#070A8D", "#0F9020"), 
+            labels = c("Hike", "Ride", "Walk"), 
+            position = "bottomleft")
+
+
+map
 ```
 
-# loop through `my_hikes` and convert Google Polylines to dataframe of lat/lon and add activities to map
+## Loop through `my_acts` and convert Google Polylines to dataframe of lat/lon; add color-coded activities to map
 ```{r}
-#......................get unique hike ids.......................
-unique_hike_ids <- unique(my_hikes$id)
+#....................get unique activity ids.....................
+unique_acts_ids <- unique(my_acts$id)
 
 #.............iterate over activities and add to map.............
-for (i in unique_hike_ids) {
+for (i in unique_acts_ids) {
   
-  #........................1) get activity.........................
-  activity <- filter(my_hikes, id == i)
+  # 1) get activity
+  activity <- filter(my_acts, id == i)
   
-  #..............decode polyline to create map outline.............
+  # 2) decode polyline
   coords <- googleway::decode_pl(activity$map.summary_polyline)
   
-  #..................plot hike outline on basemap..................
-  map <- addPolylines(map, lng = coords$lon, lat = coords$lat,
+  #3) plot activity trace on basemap; color-code according to activity type
+  map <- if (activity$type == "Ride") {
+    addPolylines(map, lng = coords$lon, lat = coords$lat,
+                      color = "#070A8D", opacity = 1/4, weight = 2)
+  } else if (activity$type == "Hike") {
+    addPolylines(map, lng = coords$lon, lat = coords$lat,
                       color = "#DF0101", opacity = 1/4, weight = 2)
-
+  } else if (activity$type == "Walk") {
+    addPolylines(map, lng = coords$lon, lat = coords$lat,
+                      color = "#0F9020", opacity = 1/4, weight = 2)
+  }
+   
 }
 
 #............................print map...........................
 map
 
 #............................save map............................
-saveWidget(map, 
-           file = "maps/sams_hiking_map_ESRITerrain_LARGEICON.html",
+saveWidget(map,
+           file = "maps/sams_activity_map_20220604.html",
            selfcontained = TRUE)
 ```
-
