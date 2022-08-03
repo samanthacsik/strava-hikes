@@ -39,7 +39,7 @@ my_token <- httr::config(token = strava_oauth(app_name, app_client_id, app_secre
 my_actvities <- rStrava::get_activity_list(stoken = my_token)
 
 #......................number of activities......................
-length(my_actvities) # 196 activites as of 6/4/2022
+length(my_actvities) # 210 activities as of 8/3/2022
 
 #...............compile and clean up activity data...............
 my_acts <- rStrava::compile_activities(my_actvities) %>%
@@ -87,26 +87,35 @@ map <- leaflet() %>%
   addProviderTiles("Esri.WorldTerrain", 
                    options = providerTileOptions(maxNativeZoom = 19, maxZoom = 100)) %>%
   
+  addMiniMap(toggleDisplay = TRUE) %>% 
+  
   # set view over Santa Barbara 
   setView(lng = -119.753042, lat = 34.484782, zoom = 10) %>% 
   
   # add clickable hiker markers with info about each hike
-  addMarkers(data = hike_data, icon = hiker_icon_custom, group = "Display Hike Icons",
+  addMarkers(data = hike_data, icon = hiker_icon_custom, 
+             #clusterOptions = markerClusterOptions(), clusterId = "hikeCluster",
+             group = "Display Hike Icons", 
              lng = ~jitter(lng, factor = 6), lat = ~jitter(lat, factor = 6),
              popup = paste("Hike Title:", hike_data$name, "<br>",
                            "Distance (miles):", hike_data$total_miles, "<br>",
                            "Elevation gain (ft):", hike_data$elevation_gain_ft)) %>%
 
   # add clickable bike markers with info about each ride 
-  addMarkers(data = ride_data, icon = bike_icon_custom, group = "Display Bike Ride Icons",
+  addMarkers(data = ride_data, icon = bike_icon_custom, 
+             #clusterOptions = markerClusterOptions(), clusterId = "bikeCluster",
+             group = "Display Bike Ride Icons",
              lng = ~jitter(lng, factor = 6), lat = ~jitter(lat, factor = 6),
              popup = paste("Ride Title:", ride_data$name, "<br>",
                            "Distance (miles):", ride_data$total_miles, "<br>",
                            "Elevation gain (ft):", ride_data$elevation_gain_ft)) %>%
 
   # add clickable walker markers with info about each  walk
-  addMarkers(data = walk_data, icon = walk_icon_custom, group = "Display Walk Icons",
+  addMarkers(data = walk_data, icon = walk_icon_custom, 
+             #clusterOptions = markerClusterOptions(), clusterId = "walkCluster",
+             group = "Display Walk Icons",
              lng = ~jitter(lng, factor = 6), lat = ~jitter(lat, factor = 6),
+             # clusterOptions = markerClusterOptions(),
              popup = paste("Walk Title:", walk_data$name, "<br>",
                            "Distance (miles):", walk_data$total_miles, "<br>",
                            "Elevation gain (ft):", walk_data$elevation_gain_ft)) %>%
@@ -159,6 +168,6 @@ map
 
 #............................save map............................
 saveWidget(map,
-           file = "maps/sams_activity_map_20220604.html",
+           file = "maps/sams_activity_map_20220803.html",
            selfcontained = TRUE)
 ```
