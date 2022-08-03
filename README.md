@@ -1,4 +1,4 @@
-# Visualizing my hikes using Strava data
+# Visualizing my hikes (& other activities) using Strava data
 
 I've been recording my hikes using [Strava](https://www.strava.com/) since late 2020 and finally got around to scraping the data to create my own heatmap using the [`rStrava`](https://fawda123.github.io/rStrava/) package.
 
@@ -36,7 +36,7 @@ A browser window should open asking you to authorize Strava to access your data.
 
 You're now ready to scrape, wrangle, and plot your data! Check out my [`strava_hikes.Rmd`](https://github.com/samanthacsik/strava-hikes/blob/main/code/strava_hikes.Rmd) file to see how I created my `leaflet` map.
 
-Other resources:
+**Other resources:**
 
 -   [How to Scrape and Store Strava Data Using R](https://rviews.rstudio.com/2021/11/22/strava-data/), by Julian During
 -   [Animate your Strava activities in R using rStrava and gganimate](https://padpadpadpad.github.io/post/animate-your-strava-activities-using-rstrava-and-gganimate/) by Daniel Padfield
