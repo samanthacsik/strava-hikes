@@ -39,7 +39,7 @@ my_token <- httr::config(token = strava_oauth(app_name, app_client_id, app_secre
 my_actvities <- rStrava::get_activity_list(stoken = my_token)
 
 #......................number of activities......................
-length(my_actvities) # 210 activities as of 8/3/2022
+length(my_actvities) # 225 activities as of 10/9/2022
 
 #...............compile and clean up activity data...............
 my_acts <- rStrava::compile_activities(my_actvities) %>%
@@ -168,6 +168,6 @@ map
 
 #............................save map............................
 saveWidget(map,
-           file = "maps/sams_activity_map_20220803.html",
+           file = "maps/sams_activity_map_20220809.html",
            selfcontained = TRUE)
 ```
