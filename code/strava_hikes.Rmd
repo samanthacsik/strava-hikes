@@ -39,7 +39,7 @@ my_token <- httr::config(token = strava_oauth(app_name, app_client_id, app_secre
 my_actvities <- rStrava::get_activity_list(stoken = my_token)
 
 #......................number of activities......................
-length(my_actvities) # 225 activities as of 10/9/2022
+length(my_actvities) # 231 activities as of 11/8/2022
 
 #...............compile and clean up activity data...............
 my_acts <- rStrava::compile_activities(my_actvities) %>%
@@ -48,6 +48,9 @@ my_acts <- rStrava::compile_activities(my_actvities) %>%
   dplyr::select(id, type, name, total_miles, elevation_gain_ft, lat = start_latlng1, lng = start_latlng2, map.summary_polyline) %>%
   filter(id != "5502812467", # remove hike that didn't recorded correctly
          !type %in% c("Workout")) # remove recorded workouts (don't have location data associated with them)
+
+#............................save data...........................
+# write_csv(my_acts, here::here("data/strava_acts_2022-11-08.csv"))
 
 #...................create subsets by activity...................
 hike_data <- my_acts %>% filter(type == "Hike")
@@ -167,7 +170,7 @@ for (i in unique_acts_ids) {
 map
 
 #............................save map............................
-saveWidget(map,
-           file = "maps/sams_activity_map_20220809.html",
-           selfcontained = TRUE)
+# saveWidget(map,
+#            file = "maps/sams_activity_map_20221108.html",
+#            selfcontained = TRUE)
 ```
