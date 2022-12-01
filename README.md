@@ -1,3 +1,5 @@
+# NOTE (2022-12-01): this repo is no longer maintained! I've started building out a Strava shinydashboard and have incorporated (and enhanced) this leafet heatmap there. Explore the app (still very much under construction) [here](https://samanthacsik.shinyapps.io/strava_dashboard/) and my [`strava-dashboard` repo here](https://github.com/samanthacsik/strava-dashboard).
+
 # Visualizing my hikes (& other activities) using Strava data
 
 I've been recording my hikes using [Strava](https://www.strava.com/) since late 2020 and finally got around to scraping the data to create my own heatmap using the [`rStrava`](https://fawda123.github.io/rStrava/) package.
